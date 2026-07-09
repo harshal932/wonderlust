@@ -1,0 +1,182 @@
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String            @id @default(uuid())
+  username          String            @unique
+  password          String
+  email             String            @unique
+  name              String?
+  department        String?
+  branch            String?
+  semester          Int?              @default(1)
+  targetCGPA        Float?            @default(8.5)
+  careerGoal        String?           @default("Software Engineer")
+  productivityScore Float?            @default(100.0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relations
+  subjects          Subject[]
+  attendance        Attendance[]
+  assignments       Assignment[]
+  projects          Project[]
+  tasks             Task[]
+  exams             Exam[]
+  notes             Note[]
+  placements        Placement[]
+  careerGoals       CareerGoal[]
+  notifications     Notification[]
+  productivityLogs  ProductivityLog[]
+}
+
+model Subject {
+  id          String       @id @default(uuid())
+  name        String
+  code        String
+  credits     Int
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  attendance  Attendance[]
+  assignments Assignment[]
+  exams       Exam[]
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  date      DateTime
+  status    String   // "PRESENT", "ABSENT", "CANCELLED"
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  deadline    DateTime
+  status      String   // "PENDING", "IN_PROGRESS", "COMPLETED"
+  priority    String   // "LOW", "MEDIUM", "HIGH"
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      String   // "TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"
+  priority    String   // "LOW", "MEDIUM", "HIGH"
+  progress    Int      @default(0) // Percentage 0-100
+  deadline    DateTime
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tasks       Task[]
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  completed   Boolean  @default(false)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Exam {
+  id             String   @id @default(uuid())
+  subjectId      String
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  date           DateTime
+  time           String?  // e.g. "09:30 AM"
+  syllabus       String?  // Text description or checkbox list JSON
+  readinessScore Int      @default(50) // Predicted by agent (0-100)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   // Markdown / text content
+  folder      String   @default("General")
+  category    String   @default("Uncategorized")
+  isBookmarked Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Placement {
+  id          String   @id @default(uuid())
+  type        String   // "DSA", "APTITUDE", "INTERVIEW", "COMPANY"
+  title       String   // e.g. "LeetCode 121 - Best Time to Buy and Sell Stock", "Amazon Application"
+  status      String   // "PENDING", "COMPLETED", "APPLIED", "INTERVIEWING", "OFFERED", "REJECTED"
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CareerGoal {
+  id              String   @id @default(uuid())
+  path            String   // "SOFTWARE_ENGINEER", "AI_ENGINEER", "CLOUD_ENGINEER", "CYBERSECURITY", "DATA_SCIENTIST"
+  completedSkills String   // Comma-separated list or JSON array of completed skills
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  read      Boolean  @default(false)
+  type      String   // "ATTENDANCE", "ASSIGNMENT", "EXAM", "SYSTEM", "AGENT"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductivityLog {
+  id         String   @id @default(uuid())
+  duration   Int      // Duration in minutes
+  focusScore Int      // Focus score out of 100
+  activity   String   // e.g. "Pomodoro Focus Session", "Notes Reading"
+  date       DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

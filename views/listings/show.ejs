@@ -1,0 +1,339 @@
+<% layout("/layouts/boilerplate") %>
+
+<div class="row mt-4">
+    <div class="col-8 offset-2">
+
+        <!-- Heading -->
+        <h3 class="mb-3"><%= listing.title %></h3>
+
+        <!-- Listing Card -->
+        <div class="card shadow-sm">
+
+            <!-- Image -->
+            <img
+                src="<%= listing.image?.url || '/default.jpg' %>"
+                class="card-img-top show-img"
+                alt="<%= listing.title %>"
+                width="300"
+                height="500"
+            >
+
+            <!-- Card Body -->
+            <div class="card-body">
+
+                <!-- Owner -->
+                <p class="card-text text-muted">
+                    Owned By
+                    <i>
+                        <%= listing.owner ? listing.owner.username : "Unknown Owner" %>
+                    </i>
+                </p>
+
+                <!-- Description -->
+                <p class="card-text text-muted">
+                    <%= listing.description %>
+                </p>
+
+                <!-- Price -->
+                <p class="card-text">
+                    <strong>Price:</strong>
+                    ₹
+                    <%= listing.price
+                        ? listing.price.toLocaleString("en-IN")
+                        : "N/A"
+                    %>
+                </p>
+
+                <!-- Location -->
+                <p class="card-text">
+                    <strong>Location:</strong>
+                    <%= listing.location %>,
+                    <%= listing.country %>
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- Edit/Delete Buttons -->
+        <% if (
+            currUser &&
+            listing.owner &&
+            String(listing.owner._id) === String(currUser._id)
+        ) { %>
+
+        <div class="d-flex justify-content-between mt-3">
+
+            <a
+                href="/listings/<%= listing._id %>/edit"
+                class="btn btn-dark"
+            >
+                Edit
+            </a>
+
+            <form
+                method="POST"
+                action="/listings/<%= listing._id %>?_method=DELETE"
+            >
+                <button class="btn btn-danger">
+                    Delete
+                </button>
+            </form>
+
+        </div>
+
+        <% } %>
+
+        <!-- Map Section -->
+        <hr class="mt-4">
+        <div class="mt-4">
+            <h4>Where you'll be</h4>
+            <div id="listing-map" class="mt-3"></div>
+        </div>
+
+        <!-- Reviews Section -->
+        <hr class="mt-4">
+
+        <% if(currUser){ %>
+
+        <div class="mt-4">
+
+            <h4>Leave a Review</h4>
+
+            <form
+                action="/listings/<%= listing._id %>/reviews"
+                method="POST"
+                novalidate
+                class="needs-validation"
+            >
+
+                <fieldset class="starability-slot mb-3">
+
+                    <input
+                        type="radio"
+                        id="rate5"
+                        name="review[rating]"
+                        value="5"
+                        required
+                    />
+                    <label for="rate5" title="Amazing">5 stars</label>
+
+                    <input
+                        type="radio"
+                        id="rate4"
+                        name="review[rating]"
+                        value="4"
+                    />
+                    <label for="rate4" title="Very good">4 stars</label>
+
+                    <input
+                        type="radio"
+                        id="rate3"
+                        name="review[rating]"
+                        value="3"
+                    />
+                    <label for="rate3" title="Average">3 stars</label>
+
+                    <input
+                        type="radio"
+                        id="rate2"
+                        name="review[rating]"
+                        value="2"
+                    />
+                    <label for="rate2" title="Not good">2 stars</label>
+
+                    <input
+                        type="radio"
+                        id="rate1"
+                        name="review[rating]"
+                        value="1"
+                    />
+                    <label for="rate1" title="Terrible">1 star</label>
+
+                </fieldset>
+
+                <div class="mb-3">
+
+                    <label for="comment" class="form-label">
+                        Comments
+                    </label>
+
+                    <textarea
+                        name="review[comment]"
+                        id="comment"
+                        rows="5"
+                        class="form-control"
+                        required
+                    ></textarea>
+
+                    <div class="invalid-feedback">
+                        Please enter your comments.
+                    </div>
+
+                </div>
+
+                <button class="btn btn-dark">
+                    Submit
+                </button>
+
+            </form>
+
+        </div>
+
+        <% } %>
+
+        <hr>
+
+        <h4 class="mb-3">
+            Reviews
+        </h4>
+
+        <% if(!listing.reviews || listing.reviews.length === 0){ %>
+
+        <p class="text-muted">
+            No reviews yet. Be the first to leave one!
+        </p>
+
+        <% } else { %>
+
+        <div class="row">
+
+            <% for(let review of listing.reviews){ %>
+            <% if (review) { %>
+
+            <div class="col-md-6 mb-3">
+
+                <div class="card shadow-sm p-3">
+
+                    <h5 class="card-title">
+                        <%= review.author
+                            ? review.author.username
+                            : "Unknown Reviewer" %>
+                    </h5>
+
+                    <p
+                        class="starability-result"
+                        data-rating="<%= review.rating %>"
+                    >
+                        Rated:
+                        <%= review.rating %>
+                        stars
+                    </p>
+
+                    <p class="card-text">
+                        <%= review.comment %>
+                    </p>
+
+                    <% if(
+                        currUser &&
+                        review.author &&
+                        String(review.author._id) === String(currUser._id)
+                    ){ %>
+
+                    <form
+                        method="POST"
+                        action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE"
+                    >
+                        <button
+                            class="btn btn-sm btn-danger"
+                        >
+                            Delete Review
+                        </button>
+                    </form>
+
+                    <% } %>
+
+                </div>
+
+            </div>
+
+            <% } %>
+            <% } %>
+
+        </div>
+
+        <% } %>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    try {
+        const dbCoordinates =
+            <%- JSON.stringify(
+                (listing.geometry && listing.geometry.coordinates) ?
+                listing.geometry.coordinates :
+                [77.2090, 28.6139]
+            ) %>;
+
+        const listingTitle =
+            <%- JSON.stringify(listing.title) %>;
+
+        const listingLocation =
+            <%- JSON.stringify(listing.location) %>;
+
+        const listingCountry =
+            <%- JSON.stringify(listing.country) %>;
+
+        const mapContainer = document.getElementById("listing-map");
+        console.log("Map container found:", !!mapContainer);
+
+        // Geocode location using Nominatim (free OSM service)
+        const searchQuery = `${listingLocation}, ${listingCountry}`;
+        console.log("Geocoding location:", searchQuery);
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`)
+            .then(res => res.json())
+            .then(data => {
+                let [lng, lat] = dbCoordinates;
+
+                if (data.length > 0) {
+                    lat = parseFloat(data[0].lat);
+                    lng = parseFloat(data[0].lon);
+                    console.log("Geocoded coordinates:", { lat, lng });
+                } else {
+                    console.log("Geocoding failed, using database coordinates");
+                }
+
+                const map = L.map("listing-map").setView([lat, lng], 12);
+
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        maxZoom: 19,
+                    }
+                ).addTo(map);
+
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<strong>${listingTitle}</strong><br>${listingLocation}, ${listingCountry}`)
+                    .openPopup();
+
+                console.log("Map initialized successfully");
+            })
+            .catch(error => {
+                console.error("Geocoding error:", error);
+                // Fallback: use database coordinates
+                const [lng, lat] = dbCoordinates;
+                const map = L.map("listing-map").setView([lat, lng], 12);
+
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        maxZoom: 19,
+                    }
+                ).addTo(map);
+
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<strong>${listingTitle}</strong><br>${listingLocation}, ${listingCountry}`)
+                    .openPopup();
+            });
+    } catch (error) {
+        console.error("Map initialization error:", error);
+    }
+});
+</script>
